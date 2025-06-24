@@ -8,6 +8,7 @@
 const CONFIG = {
   MAX_ARTICLES: 100, // Maximum number of articles to scrape
   ARTICLES_PER_PAGE: 30,
+  DEFAULT_PAGINATION_DELAY: 3000, // Default delay for pagination in milliseconds
   BASE_URL: 'https://news.ycombinator.com/newest'
 };
 

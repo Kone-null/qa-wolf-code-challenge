@@ -58,15 +58,29 @@ async function collect_page_articles(page, articleLimit) {
 
 async function collect_top_100_articles(page) {
   const articles = [];
+  
 
   // We don't need to start the loop unless we have articles to collect
   while (articles.length < CONFIG.MAX_ARTICLES) {
-    // Calculate the current page's article limit
+    
+
+
+    let paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY;// Page wait delay ms
+    // Calculate the current page's article limit and current page number
     let articleLimit = Math.min(CONFIG.ARTICLES_PER_PAGE, CONFIG.MAX_ARTICLES - articles.length);
+    let currentPage = Math.floor(articles.length / CONFIG.ARTICLES_PER_PAGE) + 1
+
+    // If we caught a "Sorry" page, we can retry the same page
+    // if(caughtSorryPage) {
+    //   console.log(`\x1b[33mRetrying Page ${currentPage} after 'Sorry' page...\x1b[0m`);
+    //   
+    //   caughtSorryPage = false; // Reset the flag after retrying
+    // }
+    
 
     // Log details for debugging
-    console.log(`Collecting articles from page: ${Math.floor(articles.length / CONFIG.ARTICLES_PER_PAGE) + 1}`);
-    console.log(`Article limit for this page: ${articleLimit}`);
+    // console.log(`Collecting articles from page: ${currentPage}`);
+    console.log(`Article limit for page ${currentPage} is  ${articleLimit} articles.`);
 
     // Wait for the page to load (adjust as needed for performance)
     // await page.waitForSelector('.athing',);  // Wait for articles to be visible
@@ -76,8 +90,20 @@ async function collect_top_100_articles(page) {
     if (await page.$("pre") !== null) {
       const sorryText = await page.$eval("pre", el => el.innerText);
       if (sorryText.includes("Sorry")) {
-        console.log("\x1b[31mNo articles found. Exiting collection.\x1b[0m");
+        // console.log("\x1b[31mNo articles found. Exiting collection.\x1b[0m");
         break;  // Exit the loop if no articles are found
+        
+
+        // caughtSorryPage = true; // Set the flag to indicate we caught a "Sorry" page
+
+        // // set Pagination delay to 30 seconds
+        // paginationDelay = 30000; // 30 seconds
+
+        // console.log(`\x1b[33mDetected 'Sorry' page. Waiting ${paginationDelay} before retrying Page ${currentPage}.\x1b[0m`);
+        // await page.waitForTimeout(paginationDelay); // Wait before retrying
+        // await page.reload(); // Reload the page to retry
+
+       //continue; // Continue to the next iteration if "Sorry" page is detected
       }
     }
 
@@ -92,9 +118,17 @@ async function collect_top_100_articles(page) {
     // If we still need more articles, click on the "More" button
     // This check prevents unnecessary clicks if we've already collected enough
     if (articles.length < CONFIG.MAX_ARTICLES) {
+      // Wait for the page to load after clicking "More"
+      
+      await page.waitForTimeout(paginationDelay); // Adjust timeout as needed for performance
+      console.log(`\x1b[33mWaiting for ${paginationDelay}ms before clicking 'More'...\x1b[0m`);
       console.log("Clicking 'More' to load more articles...");
       try {
+
+       
         await page.getByRole('link', { name: 'More', exact: true }).click();
+
+       
       } catch (error) {
         console.log("No more articles to load or error occurred.");
         break;  // Stop the loop if no more articles can be loaded

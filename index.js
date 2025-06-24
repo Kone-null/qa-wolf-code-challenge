@@ -13,7 +13,7 @@ async function sortHackerNewsArticles() {
 
   try {
     // launch browser
-    const browser = await chromium.launch({ headless: false });
+    const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({
       viewport: { width: 1280, height: 720 },
       userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
@@ -36,6 +36,11 @@ async function sortHackerNewsArticles() {
     const articles = await collect_top_100_articles(page);
 
     console.log("Total articles collected (Final):", articles.length);
+
+    if (articles.length !== CONFIG.MAX_ARTICLES) {
+      console.warn(`\x1b[31mWarning: Expected ${CONFIG.MAX_ARTICLES} articles, but collected ${articles.length}. Please check the collection logic.\x1b[0m`);
+      // await browser.close();
+    }
 
     // console.log(articles);
 
