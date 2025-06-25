@@ -1,3 +1,3 @@
-# [Hacker News/newest](https://news.ycombinator.com/newest) Scrape, Sort, and Verify.
+# [Hacker News/newest](https://news.ycombinator.com/newest):   Scrape, Sort, and Verify.
 
 
