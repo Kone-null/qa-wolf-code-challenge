@@ -1,38 +1,7 @@
-// import { CONFIG } from "./configuration.mjs"; // Import the configuration
-const { CONFIG } = require("./configuration.js"); // Import the configuration
 
 
-/**
- * Collects Top 100 articles from Hacker News | Newest
- * @param {Page} page - Playwright page object
- * @returns {Promise<Array>} Array of article objects
- */
-async function collect_article_published_date(page, link) {
 
-  // Navigate to the article link
-  await page.goto(link);
-
-  // Wait for the article to load
-  await page.waitForSelector("head meta"); // Adjust selector based on the actual page structure
-
-  // Try to get the published date meta tag safely
-  const publishedMeta = await page.$("head meta[name='article:published_time']");
-  let publishDateString = null;
-  if (publishedMeta) {
-    publishDateString = await publishedMeta.getAttribute('content');
-  }
-  // You may want to parse publishDateString to epoch if needed
-  return publishDateString;
-}
-
-
-/**
- * Collects articles from the current Page
- * @param {Page} page - Playwright page object
- * @param {number} articleLimit - Maximum number of articles to collect
- * @returns {Promise<Array>} Array of article objects
- */
-async function collect_page_articles(page, articleLimit) {
+async function collectPageArticles(page, articleLimit) {
   const articles = await page.$$eval(".athing", (items, articleLimit) => {
     // Convert NodeList to Array and slice it
     return Array.from(items).slice(0, articleLimit).map((item) => {
@@ -56,30 +25,19 @@ async function collect_page_articles(page, articleLimit) {
 
 
 
-async function collect_top_100_articles(page) {
+// async function collectTopArticles(page, maximumArticles = 100, articlesPerPage = 30, paginationDelay = 3000) {
+async function collectTopArticles(page, maximumArticles, articlesPerPage, paginationDelay) {
   const articles = [];
-  
+
 
   // We don't need to start the loop unless we have articles to collect
-  while (articles.length < CONFIG.MAX_ARTICLES) {
-    
+  while (articles.length < maximumArticles) {
 
-
-    let paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY;// Page wait delay ms
     // Calculate the current page's article limit and current page number
-    let articleLimit = Math.min(CONFIG.ARTICLES_PER_PAGE, CONFIG.MAX_ARTICLES - articles.length);
-    let currentPage = Math.floor(articles.length / CONFIG.ARTICLES_PER_PAGE) + 1
-
-    // If we caught a "Sorry" page, we can retry the same page
-    // if(caughtSorryPage) {
-    //   console.log(`\x1b[33mRetrying Page ${currentPage} after 'Sorry' page...\x1b[0m`);
-    //   
-    //   caughtSorryPage = false; // Reset the flag after retrying
-    // }
-    
+    let articleLimit = Math.min(articlesPerPage, maximumArticles - articles.length);
+    let currentPage = Math.floor(articles.length / articlesPerPage) + 1
 
     // Log details for debugging
-    // console.log(`Collecting articles from page: ${currentPage}`);
     console.log(`Article limit for page ${currentPage} is  ${articleLimit} articles.`);
 
     // Wait for the page to load (adjust as needed for performance)
@@ -92,43 +50,31 @@ async function collect_top_100_articles(page) {
       if (sorryText.includes("Sorry")) {
         // console.log("\x1b[31mNo articles found. Exiting collection.\x1b[0m");
         break;  // Exit the loop if no articles are found
-        
 
-        // caughtSorryPage = true; // Set the flag to indicate we caught a "Sorry" page
-
-        // // set Pagination delay to 30 seconds
-        // paginationDelay = 30000; // 30 seconds
-
-        // console.log(`\x1b[33mDetected 'Sorry' page. Waiting ${paginationDelay} before retrying Page ${currentPage}.\x1b[0m`);
-        // await page.waitForTimeout(paginationDelay); // Wait before retrying
-        // await page.reload(); // Reload the page to retry
-
-       //continue; // Continue to the next iteration if "Sorry" page is detected
       }
     }
 
 
 
     // Collect articles from the current page
-    const newArticles = await collect_page_articles(page, articleLimit);
+    const newArticles = await collectPageArticles(page, articleLimit);
     articles.push(...newArticles);
 
-    console.log(`Total articles collected: ${articles.length} of ${CONFIG.MAX_ARTICLES}`);
+    console.log(`Total articles collected: ${articles.length} of ${maximumArticles}`);
 
     // If we still need more articles, click on the "More" button
     // This check prevents unnecessary clicks if we've already collected enough
-    if (articles.length < CONFIG.MAX_ARTICLES) {
-      // Wait for the page to load after clicking "More"
-      
-      await page.waitForTimeout(paginationDelay); // Adjust timeout as needed for performance
+    if (articles.length < maximumArticles) {
+      // Wait for the specified delay before clicking "More"
       console.log(`\x1b[33mWaiting for ${paginationDelay}ms before clicking 'More'...\x1b[0m`);
-      console.log("Clicking 'More' to load more articles...");
+      await page.waitForTimeout(paginationDelay); // Adjust timeout as needed for performance
+
       try {
 
-       
+        console.log("Clicking 'More' to load more articles...");
         await page.getByRole('link', { name: 'More', exact: true }).click();
 
-       
+
       } catch (error) {
         console.log("No more articles to load or error occurred.");
         break;  // Stop the loop if no more articles can be loaded
@@ -137,7 +83,17 @@ async function collect_top_100_articles(page) {
   }
 
   // Ensure the collection stops exactly at 100 articles 
-  return articles.slice(0, CONFIG.MAX_ARTICLES);
+  return articles.slice(0, maximumArticles);
 }
 
-module.exports = { collect_top_100_articles, collect_page_articles };
+
+
+// async function collectHackerNewsArticles() {
+
+
+
+
+// }
+
+
+module.exports = { collectTopArticles };

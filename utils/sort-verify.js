@@ -25,4 +25,15 @@ async function verifySortedArticles(articles) {
   return true;
 }
 
-module.exports = { sortHackerNewsArticlesByAge, verifySortedArticles };
+async function verifyArticleCount(articles, maximumArticles = 100) {
+  if (!articles || articles.length === 0) {
+    console.error("No articles collected. Please check the collection logic.");
+    return false;
+  } else if (articles.length !== maximumArticles) {
+    console.warn(`\x1b[33mWarning: Expected ${maximumArticles} articles, but collected ${articles.length}. Please check the collection logic.\x1b[0m`);
+    return false;
+  }
+  return true;
+}
+
+module.exports = { sortHackerNewsArticlesByAge, verifySortedArticles, verifyArticleCount };
