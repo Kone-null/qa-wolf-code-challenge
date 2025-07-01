@@ -1,5 +1,5 @@
 const { chromium } = require("playwright");
-const { CONFIG } = require('./utils/configuration.js');// Import the configuration
+const { CONFIG } = require('./utils/config.js');// Import the configuration
 const { getArticles } = require('./utils/collect.js'); // Import the collection function
 const { sortArticlesByAge, verifySortedArticles, verifyArticleCount } = require('./utils/sort-verify.js'); // Import the sorting function
 
@@ -8,7 +8,7 @@ async function sortHackerNewsArticles() {
 
   const config = CONFIG;
   const browserType = chromium;
-  const headless = CONFIG.HEADLESS;   // Set to false for debugging purposes.
+  const headless = CONFIG.HEADLESS;       // Default: True.
   const maxArticles = config.MAX_ARTICLES;
 
 
