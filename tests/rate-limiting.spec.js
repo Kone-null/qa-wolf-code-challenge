@@ -1,96 +1,103 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { chromium } = require('playwright');
-const { collectTopArticles } = require('../utils/collect.js');
+const { getArticles } = require('../utils/collect.js');
 const { CONFIG } = require('../utils/configuration.js');
 
-// index.test.js
+/* [NOTES TO SELF]
+  Run collection tests for 100, 500, 1000, and 5000 articles.
+  - Tests run concurrently in Chromium, Firefox, and Webkit.
+
+  NOTE: Tests case which collect 500, 1000, and 5000 have a high probability - 
+  -> of failure ,as a result of a network issue (too many concurrent page requests).
+
+  Test Flakes
+
+  DEV-NOTE: RUN TEST ON SINGLE BROWSER (CHROMIUM) TO PREVENT MASS NETWORK REQUESTS.
+  [REMOVE DEV-NOTE IN FINAL VERSION]
+*/
 
 const PG_DELAY = 3000; // Reduce delay for testing
 
-test('collectTopArticles collects exactly 100 articles', async () => {
-
+test('getArticles collects exactly 100 articles', async () => {
+  const headless = true;
   const maxArticles = 100; // Set the maximum articles to collect
   const articlesPerPage = CONFIG.ARTICLES_PER_PAGE; // Use the configured articles per page
   const paginationDelay = PG_DELAY; // Reduce delay for testing (3000ms)
-  // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
+  // // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
 
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
-  const page = await context.newPage();
 
-  await page.goto(CONFIG.BASE_URL);
-
-  const articles = await collectTopArticles(page, maxArticles, articlesPerPage, paginationDelay,);
-
-  await browser.close();
+  const articles = await getArticles(
+    chromium,
+    headless, // Set to false for debugging purposes
+    maxArticles,
+    CONFIG.BASE_URL,
+    articlesPerPage,
+    paginationDelay,
+    CONFIG.USER_AGENTS,
+  );
   expect(articles).toHaveLength(maxArticles);
 
-  
 });
 
 
-
-// test('collectTopArticles collects exactly 500 articles', async () => {
-
+// test('getArticles collects exactly 500 articles', async () => {
+//   const headless = true;
 //   const maxArticles = 500; // Set the maximum articles to collect
 //   const articlesPerPage = CONFIG.ARTICLES_PER_PAGE; // Use the configured articles per page
 //   const paginationDelay = PG_DELAY; // Reduce delay for testing (3000ms)
-//   // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
-
-  
-//   const browser = await chromium.launch({ headless: true });
-//   const context = await browser.newContext();
-//   const page = await context.newPage();
-//   await page.goto(CONFIG.BASE_URL);
+//   // // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
 
 
-//   const articles = await collectTopArticles(page, maxArticles, articlesPerPage, paginationDelay,);
-  
-//   await browser.close();
+//   const articles = await getArticles(
+//     headless, // Set to false for debugging purposes
+//     maxArticles,
+//     CONFIG.BASE_URL,
+//     articlesPerPage,
+//     paginationDelay,
+//     CONFIG.USER_AGENTS,
+//   );
 //   expect(articles).toHaveLength(maxArticles);
-
-  
 
 // });
 
-// test('collectTopArticles collects exactly 1000 articles', async () => {
 
+// test('getArticles collects exactly 1000 articles', async () => {
+//   const headless = true;
 //   const maxArticles = 1000; // Set the maximum articles to collect
 //   const articlesPerPage = CONFIG.ARTICLES_PER_PAGE; // Use the configured articles per page
 //   const paginationDelay = PG_DELAY; // Reduce delay for testing (3000ms)
-//   // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
-
-  
-//   const browser = await chromium.launch({ headless: true });
-//   const context = await browser.newContext();
-//   const page = await context.newPage();
-//   await page.goto(CONFIG.BASE_URL);
+//   // // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
 
 
-//   const articles = await collectTopArticles(page, maxArticles, articlesPerPage, paginationDelay,);
-  
-//   await browser.close();
+//   const articles = await getArticles(
+//     headless, // Set to false for debugging purposes
+//     maxArticles,
+//     CONFIG.BASE_URL,
+//     articlesPerPage,
+//     paginationDelay,
+//     CONFIG.USER_AGENTS,
+//   );
 //   expect(articles).toHaveLength(maxArticles);
+
 // });
 
-// test('collectTopArticles collects exactly 5000 articles', async () => {
-
+// test('getArticles collects exactly 5000 articles', async () => {
+//   const headless = true;
 //   const maxArticles = 5000; // Set the maximum articles to collect
 //   const articlesPerPage = CONFIG.ARTICLES_PER_PAGE; // Use the configured articles per page
 //   const paginationDelay = PG_DELAY; // Reduce delay for testing (3000ms)
-//   // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
-
-  
-//   const browser = await chromium.launch({ headless: true });
-//   const context = await browser.newContext();
-//   const page = await context.newPage();
-//   await page.goto(CONFIG.BASE_URL);
+//   // // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
 
 
-//   const articles = await collectTopArticles(page, maxArticles, articlesPerPage, paginationDelay,);
-  
-//   await browser.close();
+//   const articles = await getArticles(
+//     headless, // Set to false for debugging purposes
+//     maxArticles,
+//     CONFIG.BASE_URL,
+//     articlesPerPage,
+//     paginationDelay,
+//     CONFIG.USER_AGENTS,
+//   );
 //   expect(articles).toHaveLength(maxArticles);
 
 // });

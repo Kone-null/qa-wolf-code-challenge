@@ -1,7 +1,33 @@
 
+async function isValidPage(page) {
+
+  const preTag = await page.$("pre");
+  // Handle the case where the page might not have any articles ("Sorry" Page)
+  if (preTag !== null) {
+    const sorryText = await page.$eval("pre", el => el.innerText);
+    if (sorryText.includes("Sorry")) {
+      // console.log("\x1b[31mNo articles found. Exiting collection.\x1b[0m");
+      return false;  // Exit the loop if no articles are found
+
+    }
+  }
+
+  return true;
+
+}
 
 
-async function collectPageArticles(page, articleLimit) {
+async function randomUserAgent(userAgents) {
+  // NOTE: Add throw exception for null useragent arg.
+
+  // Pick a random user agent.
+  const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+
+  return randomUserAgent;
+}
+
+
+async function scrapePageArticles(page, articleLimit) {
   const articles = await page.$$eval(".athing", (items, articleLimit) => {
     // Convert NodeList to Array and slice it
     return Array.from(items).slice(0, articleLimit).map((item) => {
@@ -24,76 +50,91 @@ async function collectPageArticles(page, articleLimit) {
 
 
 
+async function getArticles(browserType, headless, maximumArticles, hackerNewsURL, articlesPerPage, paginationDelay, userAgents) {
 
-// async function collectTopArticles(page, maximumArticles = 100, articlesPerPage = 30, paginationDelay = 3000) {
-async function collectTopArticles(page, maximumArticles, articlesPerPage, paginationDelay) {
+  // This will be populated with article during collection.
   const articles = [];
 
 
-  // We don't need to start the loop unless we have articles to collect
+  // console.log("Headless option:", headless);
+  // Ensure headless is a boolean.
+  const isHeadless = typeof headless === 'boolean' ? headless : true; // default to true if not a boolean.
+
+
+  // Create and Establish a browser instance.
+  const browser = await browserType.launch({ headless: isHeadless });
+  // Create a new browser context with a random user agent.
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 720 },
+    userAgent: await randomUserAgent(userAgents),
+  });
+
+  // Create a new page in the context.
+  const page = await context.newPage();
+
+  // Go to Hacker News homepage.
+  await page.goto(hackerNewsURL, { waitUntil: "load" });
+
+  // [DEBUG] Log the user agent for verification.
+  const userAgent = await page.evaluate(() => navigator.userAgent);
+  console.log("User Agent:", userAgent);
+
+  // [DEBUG] Collect page title for verification.
+  const pageTitle = await page.title();
+  console.log("Page Title:", pageTitle);
+
+  // Start collection of articles via pagination given collection limitations.
+  // We don't need to start the loop unless we have articles to collect.
   while (articles.length < maximumArticles) {
 
-    // Calculate the current page's article limit and current page number
-    let articleLimit = Math.min(articlesPerPage, maximumArticles - articles.length);
-    let currentPage = Math.floor(articles.length / articlesPerPage) + 1
+    // Calculate the current page's article limit and current page number.
+    let currentArticleLimit = Math.min(articlesPerPage, maximumArticles - articles.length);
+    let currentPage = Math.floor(articles.length / articlesPerPage) + 1;
 
-    // Log details for debugging
-    console.log(`Article limit for page ${currentPage} is  ${articleLimit} articles.`);
-
-    // Wait for the page to load (adjust as needed for performance)
-    // await page.waitForSelector('.athing',);  // Wait for articles to be visible
+    console.info(`current page (${currentPage}) has limit set to ${currentArticleLimit} articles.`);
 
 
-    // Handle the case where the page might not have any articles ("Sorry" Page)
-    if (await page.$("pre") !== null) {
-      const sorryText = await page.$eval("pre", el => el.innerText);
-      if (sorryText.includes("Sorry")) {
-        // console.log("\x1b[31mNo articles found. Exiting collection.\x1b[0m");
-        break;  // Exit the loop if no articles are found
-
-      }
+    // Validate page for rate-limit "Sorry" page.
+    if (!await isValidPage(page)) {
+      console.log("\x1b[31mNo articles found. Exiting collection.\x1b[0m");
+      break; // Exit the loop if no articles are found. - Can leave article count incomplete.
     }
+    // collect a given limited number of article meta data.
+    const currentPageArticles = await scrapePageArticles(page, currentArticleLimit);
+
+    // Incorporate collected article data to articles (sum) for processing.
+    articles.push(...currentPageArticles);
 
 
+    console.info(`collection progress: ${articles.length} of ${maximumArticles} articles.`);
 
-    // Collect articles from the current page
-    const newArticles = await collectPageArticles(page, articleLimit);
-    articles.push(...newArticles);
-
-    console.log(`Total articles collected: ${articles.length} of ${maximumArticles}`);
-
-    // If we still need more articles, click on the "More" button
-    // This check prevents unnecessary clicks if we've already collected enough
+    // If we still need more articles, click on the "More" button.
+    // This check prevents unnecessary clicks if we've already collected enough.
     if (articles.length < maximumArticles) {
-      // Wait for the specified delay before clicking "More"
-      console.log(`\x1b[33mWaiting for ${paginationDelay}ms before clicking 'More'...\x1b[0m`);
-      await page.waitForTimeout(paginationDelay); // Adjust timeout as needed for performance
+      // Wait for specified delay to prevent breaking rate limitations.
+      console.log(`\x1b[33mHang for ${paginationDelay}ms before loading next page of articles.\x1b[0m`); // [DEBUGGING]
+
+      await page.waitForTimeout(paginationDelay);
 
       try {
-
-        console.log("Clicking 'More' to load more articles...");
+        console.info("moving to next page by clicking 'More' action.");
         await page.getByRole('link', { name: 'More', exact: true }).click();
 
-
       } catch (error) {
-        console.log("No more articles to load or error occurred.");
-        break;  // Stop the loop if no more articles can be loaded
+        console.error("No more articles to load or error occurred.", error);
+        break;
       }
-    }
-  }
 
-  // Ensure the collection stops exactly at 100 articles 
+    }
+
+
+  }
+  await browser.close();
+  // Ensure the collection stops exactly at set maximum article limit.
   return articles.slice(0, maximumArticles);
+
 }
 
 
 
-// async function collectHackerNewsArticles() {
-
-
-
-
-// }
-
-
-module.exports = { collectTopArticles };
+module.exports = { getArticles };
