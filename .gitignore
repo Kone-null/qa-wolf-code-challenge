@@ -1,6 +1,6 @@
 
 .DS_Store
-*.bk
+*.bak
 node_modules/
 /test-results/
 /playwright-report/
