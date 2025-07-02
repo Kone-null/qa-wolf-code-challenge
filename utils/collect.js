@@ -1,12 +1,11 @@
 
-async function isValidPage(page) {
+async function hasArticlesOnPage(page) {
 
   const preTag = await page.$("pre");
   // Handle the case where the page might not have any articles ("Sorry" Page)
   if (preTag !== null) {
     const sorryText = await page.$eval("pre", el => el.innerText);
     if (sorryText.includes("Sorry")) {
-      // console.log("\x1b[31mNo articles found. Exiting collection.\x1b[0m");
       return false;  // Exit the loop if no articles are found
 
     }
@@ -49,11 +48,79 @@ async function scrapePageArticles(page, articleLimit) {
 }
 
 
-
-async function getArticles(browserType, headless, maximumArticles, hackerNewsURL, articlesPerPage, paginationDelay, userAgents) {
+async function collectByPagination(page, maximumArticles, articlesPerPage, paginationDelay) {
 
   // This will be populated with article during collection.
   const articles = [];
+
+  // Start collection of articles via pagination given collection limitations.
+  // We don't need to start the loop unless we have articles to collect.
+  let retry = 3;
+  while (articles.length < maximumArticles ) {
+
+    // Calculate how many more articles can be fetched for the current page
+    const remainingArticles = maximumArticles - articles.length;
+    const articlesThisPage = Math.min(articlesPerPage, remainingArticles);
+
+    // Determine the current page number (1-based)
+    const currentPageNumber = Math.floor(articles.length / articlesPerPage) + 1;
+
+    console.info(`current page (${currentPageNumber}) has limit set to ${articlesThisPage} articles.`);
+
+    // Validates page for rate-limit "Sorry" page.
+    if (!await hasArticlesOnPage(page)) {
+      
+      if (retry>0){
+        
+        await page.waitForLoadState('networkidle', { timeout: paginationDelay });
+        await page.reload({ waitUntil: "load" });
+        console.info(`\x1b[31mAttempting retry ${retry} of 3\x1b[0m`);
+        retry--;
+        continue; 
+      }
+      console.error("\x1b[31mNo articles found. Possible IP blacklist imposed. Exiting collection.\x1b[0m");
+      break;  // Exit loop if no articles are found (Can leave article count incomplete).
+    }
+    // collect a given limited number of article meta data.
+    const currentPageArticles = await scrapePageArticles(page, articlesThisPage);
+
+    // Incorporate collected article data to articles (sum) for processing.
+    articles.push(...currentPageArticles);
+
+
+    console.info(`collection progress: ${articles.length} of ${maximumArticles} articles.`);
+
+    // If we still need more articles, click on the "More" button.
+    // This check prevents unnecessary clicks if we've already collected enough.
+    if (articles.length < maximumArticles) {
+      // Wait for specified delay to prevent breaking rate limitations.
+      console.log(`\x1b[33m Wait for ${paginationDelay}ms before loading next page of articles.\x1b[0m`); // [DEBUGGING]
+
+      // await page.waitForTimeout(paginationDelay);
+      await page.waitForLoadState('networkidle', { timeout: paginationDelay });
+
+
+      try {
+        console.info("moving to next page by clicking 'More' action.");
+        await page.getByRole('link', { name: 'More', exact: true }).click();
+
+      } catch (error) {
+        console.error("No more articles to load or error occurred.", error);
+        break;
+      }
+
+    }
+
+
+  }
+
+  return articles;
+}
+
+
+async function getArticles(browserType, headless, maximumArticles, hackerNewsURL, articlesPerPage, paginationDelay, userAgents) {
+
+
 
 
   // console.log("Headless option:", headless);
@@ -83,52 +150,8 @@ async function getArticles(browserType, headless, maximumArticles, hackerNewsURL
   const pageTitle = await page.title();
   console.log("Page Title:", pageTitle);
 
-  // Start collection of articles via pagination given collection limitations.
-  // We don't need to start the loop unless we have articles to collect.
-  while (articles.length < maximumArticles) {
+  const articles = await collectByPagination(page, maximumArticles, articlesPerPage, paginationDelay);
 
-    // Calculate the current page's article limit and current page number.
-    let currentArticleLimit = Math.min(articlesPerPage, maximumArticles - articles.length);
-    let currentPage = Math.floor(articles.length / articlesPerPage) + 1;
-
-    console.info(`current page (${currentPage}) has limit set to ${currentArticleLimit} articles.`);
-
-
-    // Validate page for rate-limit "Sorry" page.
-    if (!await isValidPage(page)) {
-      console.log("\x1b[31mNo articles found. Exiting collection.\x1b[0m");
-      break; // Exit the loop if no articles are found. - Can leave article count incomplete.
-    }
-    // collect a given limited number of article meta data.
-    const currentPageArticles = await scrapePageArticles(page, currentArticleLimit);
-
-    // Incorporate collected article data to articles (sum) for processing.
-    articles.push(...currentPageArticles);
-
-
-    console.info(`collection progress: ${articles.length} of ${maximumArticles} articles.`);
-
-    // If we still need more articles, click on the "More" button.
-    // This check prevents unnecessary clicks if we've already collected enough.
-    if (articles.length < maximumArticles) {
-      // Wait for specified delay to prevent breaking rate limitations.
-      console.log(`\x1b[33mHang for ${paginationDelay}ms before loading next page of articles.\x1b[0m`); // [DEBUGGING]
-
-      await page.waitForTimeout(paginationDelay);
-
-      try {
-        console.info("moving to next page by clicking 'More' action.");
-        await page.getByRole('link', { name: 'More', exact: true }).click();
-
-      } catch (error) {
-        console.error("No more articles to load or error occurred.", error);
-        break;
-      }
-
-    }
-
-
-  }
   await browser.close();
   // Ensure the collection stops exactly at set maximum article limit.
   return articles.slice(0, maximumArticles);
