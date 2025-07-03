@@ -2,7 +2,17 @@ const { chromium } = require("playwright");
 const { CONFIG } = require('./utils/config.js');// Import the configuration
 const { getArticles } = require('./utils/collect.js'); // Import the collection function
 const { sortArticlesByAge, verifySortedArticles, verifyArticleCount } = require('./utils/sort-verify.js'); // Import the sorting function
+const fs = require('fs').promises;
 
+
+async function write_articles(articles, outPath) {
+  try {
+    await fs.writeFile(outPath, JSON.stringify(articles, null, 2), 'utf8');
+    console.log(`Articles written to ${outPath}`);
+  } catch (err) {
+    console.error(`Failed to write articles to ${outPath}:`, err);
+  }
+}
 
 async function sortHackerNewsArticles() {
 
@@ -23,7 +33,7 @@ async function sortHackerNewsArticles() {
 
   );
 
-
+  await write_articles(articles,"ts_data/hacker_news_articles.json");
   const accounted = await verifyArticleCount(articles, maxArticles);
 
   if (!accounted) {
@@ -33,6 +43,7 @@ async function sortHackerNewsArticles() {
 
 
   const sortedArticles = await sortArticlesByAge(articles);
+  await write_articles(sortedArticles,"ts_data/hacker_news_articles_sorted.json");
 
   if (!await verifySortedArticles(sortedArticles)) {
     console.error(`'articles' after sorting don't match order of 'sortedArticles'`)

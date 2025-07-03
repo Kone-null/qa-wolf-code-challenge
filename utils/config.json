@@ -1,6 +1,6 @@
 {
   "HEADLESS": false,
-  "MAX_ARTICLES": 100,
+  "MAX_ARTICLES": 5000,
   "ARTICLES_PER_PAGE": 30,
   "DEFAULT_PAGINATION_DELAY": 3000,
   "BASE_URL": "https://news.ycombinator.com/newest",
