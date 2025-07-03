@@ -36,4 +36,8 @@ async function verifyArticleCount(articles, maximumArticles = 100) {
   return true;
 }
 
-module.exports = { sortArticlesByAge, verifySortedArticles, verifyArticleCount };
+module.exports = { 
+  sortArticlesByAge, 
+  verifySortedArticles, 
+  verifyArticleCount 
+};
