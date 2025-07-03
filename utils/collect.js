@@ -1,5 +1,6 @@
 async function hasArticlesOnPage(page) {
   try {
+    // Check for "Sorry" block page
     const preTag = await page.$("pre");
     if (preTag !== null) {
       const sorryText = await page.$eval("pre", el => el.innerText);
@@ -7,34 +8,28 @@ async function hasArticlesOnPage(page) {
         return false;
       }
     }
-    return true;
+    // Check for correct title
+    const articlesPageTitle = "New Links | Hacker News";
+    const pageTitle = await page.title();
+    if (pageTitle !== articlesPageTitle) {
+      return false;
+    }
+    // Check for at least one article
+    return (await page.$('.athing')) !== null;
   } catch (error) {
     console.error("Error in hasArticlesOnPage:", error);
     return false;
   }
 }
-// // untested
-// async function hasArticlesOnPage(page) {
-//   try {
-//     // Check if there are any elements with the '.athing' class (which hold articles)
-//     const articles = await page.$$('.athing'); // Return a list of elements
 
-//     // If no articles are found, assume there are no articles
-//     if (articles.length === 0) {
-//       return false;
-//     }
-
-//     // Articles are present if the length is greater than zero
-//     return true;
-//   } catch (error) {
-//     console.error("Error in hasArticlesOnPage:", error);
-//     return false;  // Return false if any error occurs
-//   }
-// }
 
 async function randomUserAgent(userAgents) {
+
+  const defaultUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3";
+
   if (!Array.isArray(userAgents) || userAgents.length === 0) {
-    throw new Error("userAgents argument must be a non-empty array.");
+    return defaultUA;
+
   }
   const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
   return randomUserAgent;
@@ -81,8 +76,8 @@ async function scrapePageArticles(page, articleLimit) {
 async function collectByPagination(page, maximumArticles, articlesPerPage, paginationDelay) {
   const articles = [];
 
-  // let retryAttempts = 10;
-  // let pageDelay = paginationDelay;
+  let retryAttempts = 10;
+  let pageDelay = paginationDelay;
 
   while (articles.length < maximumArticles) {
     try {
@@ -91,18 +86,18 @@ async function collectByPagination(page, maximumArticles, articlesPerPage, pagin
       const currentPageNumber = Math.floor(articles.length / articlesPerPage) + 1;
       console.info(`current page (${currentPageNumber}) has limit set to ${articlesThisPage} articles.`);
 
-      // if (!await hasArticlesOnPage(page)) {
-      //   if (retryAttempts > 0) {
-      //     await page.waitForLoadState('networkidle', { timeout: pageDelay });
-      //     await page.reload({ waitUntil: "load" });
-      //     console.info(`\x1b[31mAttempting retry ${retry} of 3\x1b[0m`);
-      //     retry--;
-      //     pageDelay *= 2;
-      //     continue;
-      //   }
-      //   console.error("\x1b[31mNo articles found. Possible IP blacklist imposed. Exiting collection.\x1b[0m");
-      //   break;
-      // }
+      if (!await hasArticlesOnPage(page)) {
+        if (retryAttempts > 0) {
+          await page.waitForLoadState('networkidle', { timeout: pageDelay });
+          await page.reload({ waitUntil: "load" });
+          console.info(`\x1b[31mAttempting retry ${retry} of 3\x1b[0m`);
+          retry--;
+          pageDelay *= 2;
+          continue;
+        }
+        console.error("\x1b[31mNo articles found. Possible IP blacklist imposed. Exiting collection.\x1b[0m");
+        break;
+      }
 
       const currentPageArticles = await scrapePageArticles(page, articlesThisPage);
 
@@ -146,49 +141,33 @@ async function getArticles(browserType, headless, maximumArticles, hackerNewsURL
     });
     const page = await context.newPage();
 
-    // Case 1
+
+    // let reloadAttempts = 0;
+    // const maxReloadAttempts = 10;
+    // let backoff = paginationDelay;
+    // let isReloading = false;
+
     // page.on('response', async response => {
     //   const url = response.url();
-    //   // Optionally, filter for URLs you care about (e.g., pages with "news" or "newest")
     //   if (url.includes('news.ycombinator.com/newest')) {
-    //     console.log(`\x1b[33mReceived response with status: ${response.status()} for ${url}\x1b[0m`);
-    //     if (response.status() === 403) {
-
-    //       console.info("\x1b[31m403 Error Occurred: Reloading Page after Wait.\x1b[0m")
-    //       // await page.waitForLoadState('networkidle', { timeout: paginationDelay });
+    //     if (response.status() === 200) {
+    //       reloadAttempts = 0;
+    //       backoff = paginationDelay;
+    //       isReloading = false;
+    //     }
+    //     if (response.status() === 403 && reloadAttempts < maxReloadAttempts && !isReloading) {
+    //       reloadAttempts++;
+    //       isReloading = true;
+    //       console.info(`403 Error Occurred: Reloading Page after Wait. Attempt ${reloadAttempts} of ${maxReloadAttempts}.`);
+    //       await page.waitForTimeout(backoff);
     //       await page.reload({ waitUntil: "load" });
-
+    //       backoff *= 2;
+    //       isReloading = false;
+    //     } else if (response.status() === 403 && reloadAttempts >= maxReloadAttempts) {
+    //       console.error("Maximum reload attempts reached due to repeated 403 errors. Not reloading anymore.");
     //     }
     //   }
     // });
-
-    // Case 2
-    let reloadAttempts = 0;
-    const maxReloadAttempts = 10;
-    let backoff = paginationDelay;
-    let isReloading = false;
-
-    page.on('response', async response => {
-      const url = response.url();
-      if (url.includes('news.ycombinator.com/newest')) {
-        if (response.status() === 200) {
-          reloadAttempts = 0;
-          backoff = paginationDelay;
-          isReloading = false;
-        }
-        if (response.status() === 403 && reloadAttempts < maxReloadAttempts && !isReloading) {
-          reloadAttempts++;
-          isReloading = true;
-          console.info(`403 Error Occurred: Reloading Page after Wait. Attempt ${reloadAttempts} of ${maxReloadAttempts}.`);
-          await page.waitForTimeout(backoff);
-          await page.reload({ waitUntil: "load" });
-          backoff *= 2;
-          isReloading = false;
-        } else if (response.status() === 403 && reloadAttempts >= maxReloadAttempts) {
-          console.error("Maximum reload attempts reached due to repeated 403 errors. Not reloading anymore.");
-        }
-      }
-    });
 
 
 
@@ -218,4 +197,9 @@ async function getArticles(browserType, headless, maximumArticles, hackerNewsURL
   }
 }
 
-module.exports = { getArticles, scrapePageArticles };
+module.exports = {
+  getArticles, scrapePageArticles,
+  hasArticlesOnPage, randomUserAgent,
+  collectByPagination,
+
+};
