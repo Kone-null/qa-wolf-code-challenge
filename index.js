@@ -18,7 +18,7 @@ async function sortHackerNewsArticles() {
 
   const config = CONFIG;
   const browserType = chromium;
-  const headless = CONFIG.HEADLESS;       // Default: True.
+  const headless = CONFIG.HEADLESS;  // Default: True.
   const maxArticles = config.MAX_ARTICLES;
 
 

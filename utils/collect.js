@@ -35,43 +35,51 @@ async function randomUserAgent(userAgents) {
   return randomUserAgent;
 }
 
+
 async function scrapePageArticles(page, articleLimit) {
   try {
-    const limit = parseInt(articleLimit, 10) || 0; // test for non number
-    const articles = await page.$$eval(".athing", (items, limit) => {
-      return Array.from(items).slice(0, limit).map((item) => {
-        const title = item.querySelector(".titleline > a")?.innerText || "";
-        const link = item.querySelector(".titleline > a")?.href || "";
-        const rank = item.querySelector(".rank")?.innerText || "";
-        const ageElem = item.nextElementSibling?.querySelector(".age");
+    const limit = parseInt(articleLimit, 10) || 0;
+    const articleElements = await page.$$(".athing");
+    const articles = [];
 
-        let ageEpoch = 0;
+    for (let i = 0; i < Math.min(limit, articleElements.length); i++) {
+      const item = articleElements[i];
+
+      const title = await item.$eval(".titleline > a", el => el.innerText).catch(() => "");
+      const link = await item.$eval(".titleline > a", el => el.href).catch(() => "");
+      const rank = await item.$eval(".rank", el => el.innerText).catch(() => "");
+
+      // Get the age element from the next sibling row
+      const nextRow = await item.evaluateHandle(el => el.nextElementSibling);
+      let ageEpoch = 0;
+      let ageDate = "";
+
+      if (nextRow) {
+        const ageElem = await nextRow.$(".age");
         if (ageElem) {
-          const titleAttr = ageElem.getAttribute("title");
+          const titleAttr = await ageElem.getAttribute("title");
           if (titleAttr) {
             const splitTitle = titleAttr.split(" ");
             const epochStr = splitTitle.length > 1 ? splitTitle[1] : null;
-            // if (titleAttr && titleAttr.split(" ").length > 1 && !isNaN(parseInt(titleAttr.split(" ")[1]))) {
-            //   ageEpoch = parseInt(titleAttr.split(" ")[1], 10) || 0;
-            // }
             if (epochStr && !isNaN(parseInt(epochStr, 10))) {
-              ageEpoch = parseInt(epochStr);
+              ageEpoch = parseInt(epochStr, 10);
+              ageDate = new Date(ageEpoch * 1000).toISOString();
             }
           }
         }
-        let ageDate = "";
-        if (ageEpoch !== 0) {
-          ageDate = new Date(ageEpoch * 1000).toISOString();
-        }
-        return { title, link, rank, ageEpoch, ageDate };
-      });
-    }, limit);
+        await nextRow.dispose();
+      }
+
+      articles.push({ title, link, rank, ageEpoch, ageDate });
+    }
+
     return articles;
   } catch (error) {
     console.error("Error in scrapePageArticles:", error);
     return [];
   }
 }
+
 
 async function collectByPagination(page, maximumArticles, articlesPerPage, paginationDelay) {
   const articles = [];
@@ -82,9 +90,9 @@ async function collectByPagination(page, maximumArticles, articlesPerPage, pagin
   while (articles.length < maximumArticles) {
     try {
       const remainingArticles = maximumArticles - articles.length;
-      const articlesThisPage = Math.min(articlesPerPage, remainingArticles);
+      const pageArticleLimit = Math.min(articlesPerPage, remainingArticles);
       const currentPageNumber = Math.floor(articles.length / articlesPerPage) + 1;
-      console.info(`current page (${currentPageNumber}) has limit set to ${articlesThisPage} articles.`);
+      console.info(`current page (${currentPageNumber}) has limit set to ${pageArticleLimit} articles.`);
 
       if (!await hasArticlesOnPage(page)) {
         if (retryAttempts > 0) {
@@ -99,7 +107,7 @@ async function collectByPagination(page, maximumArticles, articlesPerPage, pagin
         break;
       }
 
-      const currentPageArticles = await scrapePageArticles(page, articlesThisPage);
+      const currentPageArticles = await scrapePageArticles(page, pageArticleLimit);
 
       if (!currentPageArticles || currentPageArticles.length === 0) {
         console.error("No Articles Scraped. Exiting Scraping.", currentPageArticles, articles.length);
@@ -141,34 +149,34 @@ async function getArticles(browserType, headless, maximumArticles, hackerNewsURL
     });
     const page = await context.newPage();
 
+/*  ALT Solution to rate-limit handling & Prevention 
+    let reloadAttempts = 0;
+    const maxReloadAttempts = 10;
+    let backoff = paginationDelay;
+    let isReloading = false;
 
-    // let reloadAttempts = 0;
-    // const maxReloadAttempts = 10;
-    // let backoff = paginationDelay;
-    // let isReloading = false;
-
-    // page.on('response', async response => {
-    //   const url = response.url();
-    //   if (url.includes('news.ycombinator.com/newest')) {
-    //     if (response.status() === 200) {
-    //       reloadAttempts = 0;
-    //       backoff = paginationDelay;
-    //       isReloading = false;
-    //     }
-    //     if (response.status() === 403 && reloadAttempts < maxReloadAttempts && !isReloading) {
-    //       reloadAttempts++;
-    //       isReloading = true;
-    //       console.info(`403 Error Occurred: Reloading Page after Wait. Attempt ${reloadAttempts} of ${maxReloadAttempts}.`);
-    //       await page.waitForTimeout(backoff);
-    //       await page.reload({ waitUntil: "load" });
-    //       backoff *= 2;
-    //       isReloading = false;
-    //     } else if (response.status() === 403 && reloadAttempts >= maxReloadAttempts) {
-    //       console.error("Maximum reload attempts reached due to repeated 403 errors. Not reloading anymore.");
-    //     }
-    //   }
-    // });
-
+    page.on('response', async response => {
+      const url = response.url();
+      if (url.includes('news.ycombinator.com/newest')) {
+        if (response.status() === 200) {
+          reloadAttempts = 0;
+          backoff = paginationDelay;
+          isReloading = false;
+        }
+        if (response.status() === 403 && reloadAttempts < maxReloadAttempts && !isReloading) {
+          reloadAttempts++;
+          isReloading = true;
+          console.info(`403 Error Occurred: Reloading Page after Wait. Attempt ${reloadAttempts} of ${maxReloadAttempts}.`);
+          await page.waitForTimeout(backoff);
+          await page.reload({ waitUntil: "load" });
+          backoff *= 2;
+          isReloading = false;
+        } else if (response.status() === 403 && reloadAttempts >= maxReloadAttempts) {
+          console.error("Maximum reload attempts reached due to repeated 403 errors. Not reloading anymore.");
+        }
+      }
+    });
+*/
 
 
     await page.goto(hackerNewsURL, { waitUntil: "load" });
