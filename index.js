@@ -42,7 +42,8 @@ async function saveArticlesToFile(articles, outPath) {
     await fs.writeFile(outPath, JSON.stringify(articles, null, 2), 'utf8');
     console.log(`Articles written to ${outPath}`);
   } catch (err) {
-    console.error(`Failed to write articles to ${outPath}:`, err);
+    console.error(`\x1b[31mFailed to write articles to ${outPath}:\x1b[0m`, err);
+
   }
 }
 
@@ -76,7 +77,6 @@ async function saveArticlesToFile(articles, outPath) {
  *   console.error("Failed to scrape and sort articles correctly.");
  * }
  */
-
 async function sortHackerNewsArticles() {
 
   const config = CONFIG;
@@ -100,7 +100,9 @@ async function sortHackerNewsArticles() {
   const accounted = await verifyArticleCount(articles, maxArticles);
 
   if (!accounted) {
-    console.error(`missing 'articles' ${maxArticles - articles.length} of ${maxArticles}`);
+    const missingArticles = maxArticles - articles.length;
+    console.error(`\x1b[31mMissing 'articles' ${missingArticles} of ${maxArticles}\x1b[0m`);
+
     return false; // An error occurred that resulted in missing articles (NOT totaling to maxArticleLimit. Ex: 100).
   }
 
