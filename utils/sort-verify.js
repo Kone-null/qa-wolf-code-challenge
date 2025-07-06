@@ -55,7 +55,8 @@ async function verifySortedArticles(articles) {
   // Verify Articles are sorted from newest to oldest.
   for (let i = 0; i < articles.length - 1; i++) {
     if (articles[i].ageEpoch < articles[i + 1].ageEpoch) {
-      console.error(`Articles are not sorted correctly at index ${i}: ${articles[i].title} is older than ${articles[i + 1].title}`);
+      //console.error(`\x1b[31mArticles are not sorted correctly at index ${i}: ${articles[i].title} is older than ${articles[i + 1].title}\x1b[0m`);
+
       return false;
     }
   }
@@ -65,8 +66,6 @@ async function verifySortedArticles(articles) {
 
 /**
  * Verifies that the number of collected articles matches the expected maximum.
- *
- * Logs an error if no articles were collected, and logs a warning if the count is not equal to `maximumArticles`.
  *
  * @async
  * @function
@@ -88,11 +87,8 @@ async function verifySortedArticles(articles) {
  * }
  */
 async function verifyArticleCount(articles, maximumArticles) {
-  if (!articles || articles.length === 0) {
-    console.error("No articles collected. Please check the collection logic.");
-    return false;
-  } else if (articles.length !== maximumArticles) {
-    console.warn(`\x1b[33mWarning: Expected ${maximumArticles} articles, but collected ${articles.length}. Please check the collection logic.\x1b[0m`);
+  if (!articles || articles.length === 0 || articles.length !== maximumArticles) {
+    // console.warn(`\x1b[33mWarning: Expected ${maximumArticles} articles, but collected ${articles.length}. Please check the collection logic.\x1b[0m`);
     return false;
   }
   return true;

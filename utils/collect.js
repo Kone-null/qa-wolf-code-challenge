@@ -41,7 +41,7 @@ async function hasArticlesOnPage(page) {
     // Check for at least one article
     return (await page.$('.athing')) !== null;
   } catch (error) {
-    console.error("Error in hasArticlesOnPage:", error);
+    console.error("\x1b[31mError in hasArticlesOnPage:\x1b[0m", error);
     return false;
   }
 }
@@ -132,7 +132,7 @@ async function scrapePageArticles(page, articleLimit) {
     }, limit);
     return articles;
   } catch (error) {
-    console.error("Error in scrapePageArticles:", error);
+    console.error("\x1b[31mError in scrapePageArticles:\x1b[0m", error);
     return [];
   }
 }
@@ -205,7 +205,7 @@ async function scrapePageArticles(page, articleLimit) {
 
 //     return articles;
 //   } catch (error) {
-//     console.error("Error in scrapePageArticles:", error);
+//     console.error("\x1b[31mError in scrapePageArticles:\x1b[0m", error);
 //     return [];
 //   }
 // }
@@ -262,19 +262,20 @@ async function collectByPagination(page, maximumArticles, articlesPerPage, pagin
         if (retryAttempts > 0) {
           await page.waitForLoadState('networkidle', { timeout: pageDelay });
           await page.reload({ waitUntil: "load" });
-          console.info(`\x1b[31mAttempting retry ${retry} of 3\x1b[0m`);
+
           retry--;
           pageDelay *= 2;
           continue;
         }
-        console.error("\x1b[31mNo articles found. Possible IP blacklist imposed. Exiting collection.\x1b[0m");
+        console.error("\x1b[31mCollection loop retry attempts maxed out. Exiting collection.\x1b[0m");
         break;
       }
 
       const currentPageArticles = await scrapePageArticles(page, pageArticleLimit);
 
       if (!currentPageArticles || currentPageArticles.length === 0) {
-        console.error("No Articles Scraped. Exiting Scraping.", currentPageArticles, articles.length);
+        // console.error("\x1b[31mNo Articles Scraped. Exiting Scraping.\x1b[0m", currentPageArticles, articles.length);
+
         return articles;
 
       }
@@ -283,18 +284,18 @@ async function collectByPagination(page, maximumArticles, articlesPerPage, pagin
       console.info(`collection progress: ${articles.length} of ${maximumArticles} articles.`);
 
       if (articles.length < maximumArticles) {
-        console.log(`\x1b[33m Wait for ${paginationDelay}ms before loading next page of articles.\x1b[0m`);
+        // console.log(`\x1b[33m Wait for ${paginationDelay}ms before loading next page of articles.\x1b[0m`);
         await page.waitForLoadState('networkidle', { timeout: paginationDelay });
         try {
-          console.info("moving to next page by clicking 'More' action.");
+          // console.info("moving to next page by clicking 'More' action.");
           await page.getByRole('link', { name: 'More', exact: true }).click();
         } catch (error) {
-          console.error("No more articles to load or error occurred.", error);
+          console.error("\x1b[31mNo more articles to load or error occurred.\x1b[0m", error);
           break;
         }
       }
     } catch (error) {
-      console.error("Error in collectByPagination loop:", error);
+      console.error("\x1b[31mError in collectByPagination loop:\x1b[0m", error);
       break;
     }
   }
@@ -391,17 +392,17 @@ async function getArticles(browserType, headless, maximumArticles, hackerNewsURL
 
     await page.goto(hackerNewsURL, { waitUntil: "load" });
 
-    const userAgent = await page.evaluate(() => navigator.userAgent);
-    console.log("User Agent:", userAgent);
+    // const userAgent = await page.evaluate(() => navigator.userAgent);
+    // console.log("User Agent:", userAgent);
 
-    const pageTitle = await page.title();
-    console.log("Page Title:", pageTitle);
+    // const pageTitle = await page.title();
+    // console.log("Page Title:", pageTitle);
 
     const articles = await collectByPagination(page, maximumArticles, articlesPerPage, paginationDelay);
     return articles.slice(0, maximumArticles);
 
   } catch (error) {
-    console.error("Error in getArticles:", error);
+    // console.error("Error in getArticles:", error);
     return [];
 
   } finally {
@@ -409,7 +410,9 @@ async function getArticles(browserType, headless, maximumArticles, hackerNewsURL
       try {
         await browser.close();
       } catch (closeError) {
-        console.error("Error closing browser:", closeError);
+        console.error("\x1b[31mError closing browser:\x1b[0m", closeError);
+
+        return [];
       }
     }
   }
