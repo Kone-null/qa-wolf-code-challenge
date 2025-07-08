@@ -1,95 +1,107 @@
 
+// const { Page } = require("playwright");
 /**
- * Checks whether a Playwright page contains articles by validating page structure and content.
+ * Determine if a Hacker News “new links” page contains articles.
  *
- * This function performs the following checks:
- * 1. Detects if the page is a block page (e.g., shows a "Sorry" message in a `<pre>` tag).
- * 2. Verifies the page title matches the expected "New Links | Hacker News".
- * 3. Confirms that at least one article element with class `.athing` exists on the page.
+ * Checks:
+ *  1. If a `<pre>` tag with “Sorry” exists → blocked.
+ *  2. If the document title matches the expected title.
+ *  3. If at least one article element (`.athing`) is present.
  *
  * @async
- * @function
- * @param {import('playwright').Page} page - The Playwright `Page` object to check for article content.
- * @returns {Promise<boolean>} A promise that resolves to `true` if the page contains valid articles, otherwise `false`.
- *
- * @example
- * const pageHasArticles = await hasArticlesOnPage(page);
- * if (pageHasArticles) {
- *   console.log("Page contains articles!");
- * } else {
- *   console.log("No articles found or blocked page.");
- * }
- *
- * @throws Logs an error and returns `false` if an exception occurs during page evaluation.
+ * @function hasArticlesOnPage
+ * @param {import('playwright').Page} page  – Playwright Page instance.
+ * @returns {Promise<boolean>}  `true` if valid articles are found; otherwise `false`.
  */
-async function hasArticlesOnPage(page) {
+export async function hasArticlesOnPage(page) {
+  const EXPECTED_TITLE = 'New Links | Hacker News';
   try {
-    // Check for "Sorry" block page
-    const preTag = await page.$("pre");
-    if (preTag !== null) {
-      const sorryText = await page.$eval("pre", el => el.innerText);
-      if (sorryText.includes("Sorry")) {
+
+    // 1. Block detection via <pre> text.
+    const preTag = page.locator('pre');
+    const hasPre = await preTag.count() > 0;
+    if (hasPre) {
+      const text = await preTag.innerText({ timeout: 1000 }).catch(() => '');
+      if (text.includes("Sorry")) {
+        console.warn('\x1b[33m[WARN]\x1b[0m [hasArticlesOnPage] Blocked page detected (contains "Sorry").'); // make orange
         return false;
       }
+
     }
-    // Check for correct title
-    const articlesPageTitle = "New Links | Hacker News";
-    const pageTitle = await page.title();
-    if (pageTitle !== articlesPageTitle) {
+
+    // 2. Title check.
+    const actualTitle = await page.title();
+    if (actualTitle !== EXPECTED_TITLE) {
+      console.warn(`\x1b[33m[WARN]\x1b[0m  [hasArticlesOnPage] Unexpected page title: expected "${EXPECTED_TITLE}", got "${actualTitle}".`); // make orange
       return false;
     }
-    // Check for at least one article
-    return (await page.$('.athing')) !== null;
+
+    // 3. Article elements check.
+    const articleCount = await page.locator('.athing').count();
+    if (articleCount === 0) {
+      console.warn('\x1b[33m[WARN]\x1b[0m  [hasArticlesOnPage] No article elements (.athing) found on the page.'); // make orange
+      return false;
+    }
+
+    return true;
+
   } catch (error) {
-    console.error("\x1b[31mError in hasArticlesOnPage:\x1b[0m", error);
+    console.error(`\x1b[31m[ERROR]\x1b[0m  [hasArticlesOnPage]  Error in hasArticlesOnPage: ${err.message}`); // make red
     return false;
   }
 }
 
 /**
- * Returns a random user agent string from the provided list, or a default user agent if the list is invalid or empty.
+ * Selects a random user agent string from a list, or returns a default if the list is invalid or empty.
  *
  * @async
- * @function
+ * @function randomUserAgent
  * @param {string[]} userAgents - An array of user agent strings to choose from.
- * @returns {Promise<string>} A randomly selected user agent string, or a default one if none are provided.
+ * @returns {Promise<string>} A randomly selected user agent string, or a default fallback.
  *
  * @example
  * const agents = [
  *   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)...",
  *   "Mozilla/5.0 (Windows NT 10.0; Win64; x64)..."
  * ];
- * const userAgent = await randomUserAgent(agents);
- * console.log(userAgent); // Logs one of the provided agents, or the default if the array is empty
+ * const ua = await randomUserAgent(agents);
+ * console.log(ua); // One of the provided agents, or the default if none are valid.
  */
-async function randomUserAgent(userAgents) {
+export async function randomUserAgent(userAgents) {
 
-  const defaultUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3";
+  const DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+    "AppleWebKit/537.36 (KHTML, like Gecko) " +
+    "Chrome/58.0.3029.110 Safari/537.3";
 
   if (!Array.isArray(userAgents) || userAgents.length === 0) {
-    return defaultUA;
+    return DEFAULT_UA;
 
   }
-  const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-  return randomUserAgent;
+  const randomIndex = Math.floor(Math.random() * userAgents.length);
+  return userAgents[randomIndex];
 }
 
 /**
- * Scrapes article data from a given Playwright page, extracting title, link, rank, and age for each article.
+ * Scrapes article metadata from a Hacker News page using Playwright. 
+ * 
+ * Extracts:
+ *  - Title and link
+ *  - Rank position
+ *  - Epoch time from article age tooltip
  *
  * @async
- * @function
- * @param {import('playwright').Page} page - A Playwright `Page` instance representing the browser page to scrape.
- * @param {number|string} articleLimit - The maximum number of articles to scrape. Can be a number or a string convertible to a number.
- * @returns {Promise<Object[]>} A promise that resolves to an array of article objects.
+ * @function scrapePageArticles
+ * @param {import('playwright').Page} page - A Playwright `Page` instance representing the page to scrape.
+ * @param {number|string} articleLimit - Max number of articles to scrape. Can be numeric or numeric string.
+ * @returns {Promise<Article[]>} Resolves with an array of article objects.
  *
  * Each article object has the following structure:
  * @typedef {Object} Article
- * @property {string} title - The title of the article.
- * @property {string} link - The URL of the article.
- * @property {string} rank - The ranking or position of the article on the page.
- * @property {number} ageEpoch - The article's age in epoch time (seconds since Unix epoch), if available.
- * @property {string} ageDate - ISO-formatted date string derived from the epoch, or empty string if not available.
+ * @property {string} title     - Article title.
+ * @property {string} link      - URL to the article.
+ * @property {string} rank      - Rank/position (e.g. "1.", "2.").
+ * @property {number} ageEpoch  - The article's age in epoch time (seconds since Unix epoch), if available.
+ * @property {string} ageDate   - ISO 8601 string derived from the epoch, or empty string if not available.
  *
  * @example
  * const { chromium } = require("playwright");
@@ -100,31 +112,32 @@ async function randomUserAgent(userAgents) {
  * console.log(articles);
  * await browser.close();
  * 
- * @throws Logs an error to the console and returns an empty array if scraping fails.
  */
-async function scrapePageArticles(page, articleLimit) {
+export async function scrapePageArticles(page, articleLimit) {
   try {
-    const limit = parseInt(articleLimit, 10) || 0; // test for non number
+    const limit = Math.max(0, parseInt(articleLimit, 10) || 0);
+
     const articles = await page.$$eval(".athing", (items, limit) => {
       return Array.from(items).slice(0, limit).map((item) => {
-        const title = item.querySelector(".titleline > a")?.innerText || "";
-        const link = item.querySelector(".titleline > a")?.href || "";
-        const rank = item.querySelector(".rank")?.innerText || "";
-        const ageElem = item.nextElementSibling?.querySelector(".age");
+        const anchor = item.querySelector('.titleline > a');
+        const title = anchor?.innerText || '';
+        const link = anchor?.href || '';
+        const rank = item.querySelector('.rank')?.innerText || '';
 
+        const ageElem = item.nextElementSibling?.querySelector('.age');
         let ageEpoch = 0;
+        let ageDate = '';
+
+
         if (ageElem) {
           const titleAttr = ageElem.getAttribute("title");
           if (titleAttr) {
-            const splitTitle = titleAttr.split(" ");
-            const epochStr = splitTitle.length > 1 ? splitTitle[1] : null;
-            if (epochStr && !isNaN(parseInt(epochStr, 10))) {
-              ageEpoch = parseInt(epochStr);
-            }
+            ageEpoch = parseInt(titleAttr.split(" ")[1]) || 0;
           }
         }
-        let ageDate = "";
+
         if (ageEpoch !== 0) {
+
           ageDate = new Date(ageEpoch * 1000).toISOString();
         }
         return { title, link, rank, ageEpoch, ageDate };
@@ -132,206 +145,102 @@ async function scrapePageArticles(page, articleLimit) {
     }, limit);
     return articles;
   } catch (error) {
-    console.error("\x1b[31mError in scrapePageArticles:\x1b[0m", error);
+    console.error(`\x1b[31m[ERROR]\x1b[0m  [scrapePageArticles] Error in scrapePageArticles: ${error}`); //  Make red
     return [];
   }
 }
 
 
 
-// /**
-//  * Scrapes a list of articles from a Playwright page, retrieving each article's title, link, rank, and age (if available).
-//  *
-//  * @async
-//  * @function scrapePageArticles
-//  * @param {import('playwright').Page} page - The Playwright `Page` instance to scrape.
-//  * @param {number|string} articleLimit - Maximum number of articles to scrape; accepts a number or a string that can be parsed to a number.
-//  * @returns {Promise<Article[]>} A promise that resolves to an array of article objects.
-//  *
-//  * @typedef {Object} Article
-//  * @property {string} title - The article's title text.
-//  * @property {string} link - The URL of the article.
-//  * @property {string} rank - The article's rank on the page (e.g., "1.", "2.").
-//  * @property {number} ageEpoch - Unix epoch time representing when the article was posted, or 0 if unavailable.
-//  * @property {string} ageDate - ISO 8601 formatted date string derived from the epoch, or an empty string if not found.
-//  *
-//  * @example
-//  * const { chromium } = require("playwright");
-//  * const browser = await chromium.launch();
-//  * const page = await browser.newPage();
-//  * await page.goto('https://news.ycombinator.com/');
-//  * const articles = await scrapePageArticles(page, 10);
-//  * console.log(articles);
-//  * await browser.close();
-//  *
-//  * @throws Logs an error to the console and returns an empty array if scraping fails.
-//  */
-// async function scrapePageArticles(page, articleLimit) {
-//   try {
-//     const limit = parseInt(articleLimit, 10) || 0;
-//     const articleElements = await page.$$(".athing");
-//     const articles = [];
-
-//     for (let i = 0; i < Math.min(limit, articleElements.length); i++) {
-//       const item = articleElements[i];
-
-//       const title = await item.$eval(".titleline > a", el => el.innerText).catch(() => "");
-//       const link = await item.$eval(".titleline > a", el => el.href).catch(() => "");
-//       const rank = await item.$eval(".rank", el => el.innerText).catch(() => "");
-
-//       // Get the age element from the next sibling row
-//       const nextRow = await item.evaluateHandle(el => el.nextElementSibling);
-//       let ageEpoch = 0;
-//       let ageDate = "";
-
-//       if (nextRow) {
-//         const ageElem = await nextRow.$(".age");
-//         if (ageElem) {
-//           const titleAttr = await ageElem.getAttribute("title");
-//           if (titleAttr) {
-//             const splitTitle = titleAttr.split(" ");
-//             const epochStr = splitTitle.length > 1 ? splitTitle[1] : null;
-//             if (epochStr && !isNaN(parseInt(epochStr, 10))) {
-//               ageEpoch = parseInt(epochStr, 10);
-//               ageDate = new Date(ageEpoch * 1000).toISOString();
-//             }
-//           }
-//         }
-//         await nextRow.dispose();
-//       }
-
-//       articles.push({ title, link, rank, ageEpoch, ageDate });
-//     }
-
-//     return articles;
-//   } catch (error) {
-//     console.error("\x1b[31mError in scrapePageArticles:\x1b[0m", error);
-//     return [];
-//   }
-// }
-
 
 /**
- * Collects articles from a paginated Playwright page by iteratively scraping pages until a maximum number is reached.
- *
- * The function:
- * - Checks if articles are present using `hasArticlesOnPage()`
- * - Scrapes a limited number of articles per page using `scrapePageArticles()`
- * - Waits between page navigations and handles retries on failed loads
- * - Clicks the "More" button to advance pagination
+ * Iteratively collects articles across paginated Hacker News pages.
  *
  * @async
- * @function
- * @param {import('playwright').Page} page - A Playwright `Page` instance from which articles will be scraped.
- * @param {number} maximumArticles - Total number of articles to collect before stopping.
- * @param {number} articlesPerPage - Number of articles to attempt to collect per page.
- * @param {number} paginationDelay - Initial delay (in milliseconds) to wait between paginated requests.
- * @returns {Promise<Object[]>} A promise that resolves to an array of article objects collected across pages.
- *
- * Each article object typically has this shape:
- * @typedef {Object} Article
- * @property {string} title - The article title.
- * @property {string} link - The article URL.
- * @property {string} rank - The article rank as displayed.
- * @property {number} ageEpoch - The UNIX epoch timestamp (in seconds) when the article was posted.
- * @property {string} ageDate - An ISO 8601 formatted date string derived from `ageEpoch`.
- *
- * @example
- * const articles = await collectByPagination(page, 100, 30, 2000);
- * console.log(`Collected ${articles.length} articles.`);
- *
- * @throws Logs an error and exits the loop if:
- * - No articles are found after retries (possible block/ban)
- * - Scraping fails for a page
- * - Pagination navigation fails (e.g., no "More" button)
+ * @function collectByPagination
+ * @param {Page} page               – Playwright page to scrape.
+ * @param {number} maxTotal         – Total number of articles to gather.
+ * @param {number} perPageLimit     – Max articles to fetch per page.
+ * @param {number} initialDelayMs   – Initial wait time (ms) between page loads.
+ * @returns {Promise<Article[]>}    – Array of collected article objects.
  */
-async function collectByPagination(page, maximumArticles, articlesPerPage, paginationDelay) {
-  const articles = [];
+export async function collectByPagination(
+  page,
+  maxTotal,
+  perPageLimit,
+  initialDelayMs
+) {
+  const collected = [];
+  let retries = 4;
+  let delayMs = initialDelayMs;
+  let pageIndex = 1;
 
-  let retryAttempts = 10;
-  let pageDelay = paginationDelay;
+  while (collected.length < maxTotal) {
 
-  while (articles.length < maximumArticles) {
-    try {
-      const remainingArticles = maximumArticles - articles.length;
-      const pageArticleLimit = Math.min(articlesPerPage, remainingArticles);
-      const currentPageNumber = Math.floor(articles.length / articlesPerPage) + 1;
-      console.info(`current page (${currentPageNumber}) has limit set to ${pageArticleLimit} articles.`);
+    const remaining = maxTotal - collected.length;
+    const pageLimit = Math.min(perPageLimit, remaining);
+    console.info(`\x1b[36m[INFO]\x1b[0m  [collectByPagination] Page ${pageIndex}: fetching up to ${pageLimit} articles`); // make cyan
 
-      if (!await hasArticlesOnPage(page)) {
-        if (retryAttempts > 0) {
-          await page.waitForLoadState('networkidle', { timeout: pageDelay });
-          await page.reload({ waitUntil: "load" });
-
-          retry--;
-          pageDelay *= 2;
-          continue;
-        }
-        console.error("\x1b[31mCollection loop retry attempts maxed out. Exiting collection.\x1b[0m");
-        break;
+    // Ensure page is valid
+    if (!(await hasArticlesOnPage(page))) {
+      if (retries-- > 0) {
+        console.warn(`\x1b[33m[WARN]\x1b[0m  [collectByPagination] Page blocked or invalid. Retrying after ${delayMs}ms...`); // make orange
+        await page.waitForTimeout(delayMs);
+        delayMs *= 2;
+        await page.reload({ waitUntil: 'networkidle' });
+        continue;
       }
-
-      const currentPageArticles = await scrapePageArticles(page, pageArticleLimit);
-
-      if (!currentPageArticles || currentPageArticles.length === 0) {
-        // console.error("\x1b[31mNo Articles Scraped. Exiting Scraping.\x1b[0m", currentPageArticles, articles.length);
-
-        return articles;
-
-      }
-
-      articles.push(...currentPageArticles);
-      console.info(`collection progress: ${articles.length} of ${maximumArticles} articles.`);
-
-      if (articles.length < maximumArticles) {
-        // console.log(`\x1b[33m Wait for ${paginationDelay}ms before loading next page of articles.\x1b[0m`);
-        await page.waitForLoadState('networkidle', { timeout: paginationDelay });
-        try {
-          // console.info("moving to next page by clicking 'More' action.");
-          await page.getByRole('link', { name: 'More', exact: true }).click();
-        } catch (error) {
-          console.error("\x1b[31mNo more articles to load or error occurred.\x1b[0m", error);
-          break;
-        }
-      }
-    } catch (error) {
-      console.error("\x1b[31mError in collectByPagination loop:\x1b[0m", error);
+      console.error('\x1b[31m[ERROR]\x1b[0m  [collectByPagination]  Max retries reached. Aborting pagination.'); // make red
       break;
     }
+
+    const articles = await scrapePageArticles(page, pageLimit);
+
+    if (articles.length === 0) {
+      console.warn('\x1b[33m[WARN]\x1b[0m  [collectByPagination] No articles found on this page. Stopping.'); // make orange
+      break;
+    }
+
+    collected.push(...articles);
+    console.info(`\x1b[36m[INFO]\x1b[0m  [collectByPagination] Collected ${collected.length}/${maxTotal} articles so far.`); // make cyan
+    // Prepare next page if needed.
+    if (collected.length < maxTotal) {
+      await page.waitForLoadState('networkidle', { timeout: initialDelayMs });
+      try {
+        await page.getByRole('link', { name: 'More', exact: true }).click();
+        pageIndex++;
+      } catch {
+        console.warn('\x1b[33m[WARN]\x1b[0m  [collectByPagination] No "More" button found. Ending pagination.'); // make orange
+        break;
+      }
+    }
+
   }
-  return articles;
+  return collected;
 }
 
 
 /**
- * Launches a browser, navigates to a Hacker News page, and collects a specified number of articles using pagination.
- *
- * This function handles:
- * - Launching a browser using the provided `browserType` (Chromium, Firefox, or WebKit)
- * - Configuring user agent and viewport
- * - Navigating to the target URL
- * - Optionally handling headless mode
- * - Collecting articles via `collectByPagination`
- * - Optionally handling user-agent rotation and rate-limit scenarios
+ * Launches a browser, navigates to Hacker News, and paginates to collect articles.
  *
  * @async
- * @function
- * @param {import('playwright').BrowserType} browserType - The Playwright browser type (e.g., `chromium`, `firefox`, or `webkit`).
- * @param {boolean} headless - Whether to run the browser in headless mode.
- * @param {number} maximumArticles - Maximum number of articles to collect.
- * @param {string} hackerNewsURL - The URL of the Hacker News page to start scraping from.
- * @param {number} articlesPerPage - Number of articles to collect per page before paginating.
- * @param {number} paginationDelay - Delay (in milliseconds) between paginated requests.
- * @param {string[]} userAgents - An array of user-agent strings for rotation.
- * @returns {Promise<Object[]>} A promise that resolves to an array of article objects, up to the specified limit.
+ * @function getArticles
+ * @param {BrowserType} browserType       – Playwright browser (chromium, firefox, webkit).
+ * @param {boolean}     headless          – Run in headless mode if true.
+ * @param {number}      maxArticles       – Total articles to collect.
+ * @param {string}      startUrl          – Hacker News URL to begin scraping.
+ * @param {number}      perPageLimit      – Articles per page before clicking “More”.
+ * @param {number}      paginationDelayMs – Delay (ms) between page navigations.
+ * @param {string[]}    userAgents        – List of UAs for rotation.
+ * @returns {Promise<Article[]>} Up to `maxArticles` scraped articles, or empty on error.
  *
  * @typedef {Object} Article
- * @property {string} title - The article title.
- * @property {string} link - The article URL.
- * @property {string} rank - The article's rank.
- * @property {number} ageEpoch - The UNIX epoch timestamp (in seconds).
- * @property {string} ageDate - ISO string representation of the article's posting date.
- *
+ * @property {string} title      – Article title.
+ * @property {string} link       – Article URL.
+ * @property {string} rank       – Displayed rank (e.g. "1.").
+ * @property {number} ageEpoch   – UNIX timestamp (seconds).
+ * @property {string} ageDate    – ISO 8601 date string.
+ * 
  * @example
  * const { chromium } = require('playwright');
  * const articles = await getArticles(
@@ -345,82 +254,55 @@ async function collectByPagination(page, maximumArticles, articlesPerPage, pagin
  * );
  * console.log(articles.length); // Output: 50
  *
- * @throws Logs errors encountered during browser operation, page navigation, or scraping.
- * Always attempts to close the browser in the `finally` block.
  */
-async function getArticles(browserType, headless, maximumArticles, hackerNewsURL, articlesPerPage, paginationDelay, userAgents) {
-
+export async function getArticles(
+  browserType,
+  headless,
+  maxArticles,
+  startUrl,
+  perPageLimit,
+  paginationDelayMs,
+  userAgents
+) {
   let browser;
   try {
-    const isHeadless = typeof headless === 'boolean' ? headless : true;
-    browser = await browserType.launch({ headless: isHeadless });
+
+    // 1. Launch and configure browser.
+    browser = await browserType.launch({ headless: Boolean(headless) });
     const context = await browser.newContext({
       viewport: { width: 1280, height: 720 },
       userAgent: await randomUserAgent(userAgents),
     });
     const page = await context.newPage();
 
-    /*  ALT Solution to rate-limit handling & Prevention 
-        let reloadAttempts = 0;
-        const maxReloadAttempts = 10;
-        let backoff = paginationDelay;
-        let isReloading = false;
-    
-        page.on('response', async response => {
-          const url = response.url();
-          if (url.includes('news.ycombinator.com/newest')) {
-            if (response.status() === 200) {
-              reloadAttempts = 0;
-              backoff = paginationDelay;
-              isReloading = false;
-            }
-            if (response.status() === 403 && reloadAttempts < maxReloadAttempts && !isReloading) {
-              reloadAttempts++;
-              isReloading = true;
-              console.info(`403 Error Occurred: Reloading Page after Wait. Attempt ${reloadAttempts} of ${maxReloadAttempts}.`);
-              await page.waitForTimeout(backoff);
-              await page.reload({ waitUntil: "load" });
-              backoff *= 2;
-              isReloading = false;
-            } else if (response.status() === 403 && reloadAttempts >= maxReloadAttempts) {
-              console.error("Maximum reload attempts reached due to repeated 403 errors. Not reloading anymore.");
-            }
-          }
-        });
-    */
 
+    // 2. Navigate to start URL.
+    await page.goto(startUrl, { waitUntil: "load" });
 
-    await page.goto(hackerNewsURL, { waitUntil: "load" });
+    // 3. Collect via pagination.
+    const allArticles = await collectByPagination(
+      page,
+      maxArticles,
+      perPageLimit,
+      paginationDelayMs
+    );
 
-    // const userAgent = await page.evaluate(() => navigator.userAgent);
-    // console.log("User Agent:", userAgent);
+    // 4. Slice to exactly maxArticles (in case pagination over-collected).
+    return allArticles.slice(0, maxArticles);
 
-    // const pageTitle = await page.title();
-    // console.log("Page Title:", pageTitle);
-
-    const articles = await collectByPagination(page, maximumArticles, articlesPerPage, paginationDelay);
-    return articles.slice(0, maximumArticles);
-
-  } catch (error) {
-    // console.error("Error in getArticles:", error);
+  } catch (err) {
+    console.error(`\x1b[31m[ERROR]\x1b[0m  [getArticles]  Error: ${err}`); // make red
     return [];
-
   } finally {
+    // 5. Ensure browser closes.
     if (browser) {
       try {
         await browser.close();
-      } catch (closeError) {
-        console.error("\x1b[31mError closing browser:\x1b[0m", closeError);
-
-        return [];
+      } catch (closeErr) {
+        console.error(`\x1b[31m[ERROR]\x1b[0m  [getArticles]  Error closing browser: ${closeErr}`); // make red
       }
     }
   }
 }
 
-module.exports = {
-  getArticles, scrapePageArticles,
-  hasArticlesOnPage, randomUserAgent,
-  collectByPagination,
 
-};
