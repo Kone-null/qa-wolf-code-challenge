@@ -45,11 +45,12 @@ Configuration is managed in [`utils/config.json`](utils/config.json):
 
 ```json
 {
-  "HEADLESS": false,
+  "HEADLESS": true,
   "MAX_ARTICLES": 100,
   "ARTICLES_PER_PAGE": 30,
   "DEFAULT_PAGINATION_DELAY": 3000,
   "BASE_URL": "https://news.ycombinator.com/newest",
+  "SAVE_PATH": "ts_data",
   "USER_AGENTS": [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) ...",
@@ -65,6 +66,7 @@ Configuration is managed in [`utils/config.json`](utils/config.json):
 - **ARTICLES_PER_PAGE**: Number of articles per page on HN (default: 30).
 - **DEFAULT_PAGINATION_DELAY**: Delay in ms between page loads (default: 3000).
 - **BASE_URL**: The Hacker News "newest" URL.
+- **SAVE_PATH**: The directory to save collected article(s) meta data. Makes directory if not exists.
 - **USER_AGENTS**: List of user agents for requests.
 
 You can edit `utils/config.json` to change scraping and browser parameters.
@@ -131,11 +133,19 @@ npx playwright test
 ```
 qa-wolf-code-challenge/
 ├── index.js                 # Main application entry point
+├── CHALLENGE_README.md
+├── README.md
 ├── package.json
 ├── package-lock.json
 ├── playwright.config.js     # Playwright test configuration
 ├── tests/                   # Playwright tests
-│   └── rate-limiting.spec.js
+│   ├── collection/
+│   │   ├── get_article.test.js
+│   │   ├── has_articles.test.js
+│   │   ├── scrape.test.js
+│   │   └── ua_select.test.js
+│   ├── rate_limiting.spec.js
+│   └── sort_verify.test.js
 └── utils/
     ├── config.js            # Loads config JSON
     ├── config.json          # App configuration
