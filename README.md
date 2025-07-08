@@ -1,6 +1,6 @@
 # QA Wolf Coding Challenge: Hacker News Scraper
 
-This repository contains a solution to the QA Wolf Application Coding Challenge. The app uses Playwright to scrape the [Hacker News "newest" page](https://news.ycombinator.com/newest), collects articles, sorts them by age, and verifies that the first 100 articles are sorted from newest to oldest.
+This repository contains a solution to the [QA Wolf Application Coding Challenge](CHALLENGE_README.md). The app uses Playwright to scrape the [Hacker News "newest" page](https://news.ycombinator.com/newest), collects articles, sorts them by age, and verifies that the first 100 articles are sorted from newest to oldest.
 
 ---
 
