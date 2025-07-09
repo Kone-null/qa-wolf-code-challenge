@@ -1,3 +1,4 @@
+// @ts-check
 const { test, expect } = require('@playwright/test');
 const { chromium } = require('playwright');
 const { getArticles} = require('../../utils/collect.js');

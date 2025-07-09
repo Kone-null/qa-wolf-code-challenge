@@ -1,3 +1,4 @@
+// @ts-check
 const { test, expect } = require('@playwright/test');
 const {randomUserAgent } = require('../../utils/collect.js');
 

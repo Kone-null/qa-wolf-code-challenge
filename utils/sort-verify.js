@@ -53,7 +53,7 @@ export async function verifySortedArticles(articles) {
         `\x1b[31m[ERROR]\x1b[0m  [verifySortedArticles] Order error at index ${i}: ` +
         `"${current.title}" (epoch: ${current.ageEpoch}) is older than ` +
         `"${next.title}" (epoch: ${next.ageEpoch}).`
-      ); // make red
+      );
       return false;
     }
   }
@@ -91,7 +91,7 @@ export async function verifyArticleCount(
 
   const actualCount = Array.isArray(articles) ? articles.length : 0;
   if (actualCount !== expectedCount) {
-    console.warn(`\x1b[33m[WARN]\x1b[0m  [verifyArticleCount] Mismatch: expected ${expectedCount}, but collected ${actualCount}.`); // make red
+    console.warn(`\x1b[33m[WARN]\x1b[0m  [verifyArticleCount] Mismatch: expected ${expectedCount}, but collected ${actualCount}.`);
     return false;
   }
   return true;

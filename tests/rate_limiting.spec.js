@@ -14,12 +14,10 @@ test.describe('rate-limit testing with getArticles', () => {
     const maxArticles = 100; // Set the maximum articles to collect
     const articlesPerPage = CONFIG.ARTICLES_PER_PAGE; // Use the configured articles per page
     const paginationDelay = PG_DELAY; // Reduce delay for testing (3000ms)
-    // // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
-
 
     const articles = await getArticles(
       chromium,
-      headless, // Set to false for debugging purposes
+      headless, 
       maxArticles,
       CONFIG.BASE_URL,
       articlesPerPage,
@@ -36,12 +34,10 @@ test.describe('rate-limit testing with getArticles', () => {
     const maxArticles = 200; // Set the maximum articles to collect
     const articlesPerPage = CONFIG.ARTICLES_PER_PAGE; // Use the configured articles per page
     const paginationDelay = PG_DELAY; // Reduce delay for testing (3000ms)
-    // // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
-
 
     const articles = await getArticles(
       chromium,
-      headless, // Set to false for debugging purposes
+      headless, 
       maxArticles,
       CONFIG.BASE_URL,
       articlesPerPage,
@@ -58,12 +54,10 @@ test.describe('rate-limit testing with getArticles', () => {
     const maxArticles = 600; // Set the maximum articles to collect
     const articlesPerPage = CONFIG.ARTICLES_PER_PAGE; // Use the configured articles per page
     const paginationDelay = PG_DELAY; // Reduce delay for testing (3000ms)
-    // // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
-
 
     const articles = await getArticles(
       chromium,
-      headless, // Set to false for debugging purposes
+      headless, 
       maxArticles,
       CONFIG.BASE_URL,
       articlesPerPage,
@@ -79,12 +73,11 @@ test.describe('rate-limit testing with getArticles', () => {
     const maxArticles = 800; // Set the maximum articles to collect
     const articlesPerPage = CONFIG.ARTICLES_PER_PAGE; // Use the configured articles per page
     const paginationDelay = PG_DELAY; // Reduce delay for testing (3000ms)
-    // // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
 
 
     const articles = await getArticles(
       chromium,
-      headless, // Set to false for debugging purposes
+      headless, 
       maxArticles,
       CONFIG.BASE_URL,
       articlesPerPage,
@@ -100,12 +93,11 @@ test.describe('rate-limit testing with getArticles', () => {
     const maxArticles = 1000; // Set the maximum articles to collect
     const articlesPerPage = CONFIG.ARTICLES_PER_PAGE; // Use the configured articles per page
     const paginationDelay = PG_DELAY; // Reduce delay for testing (3000ms)
-    // // const paginationDelay = CONFIG.DEFAULT_PAGINATION_DELAY; // Use the configured pagination delay
 
 
     const articles = await getArticles(
       chromium,
-      headless, // Set to false for debugging purposes
+      headless, 
       maxArticles,
       CONFIG.BASE_URL,
       articlesPerPage,
