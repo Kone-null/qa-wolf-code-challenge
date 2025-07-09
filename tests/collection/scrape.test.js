@@ -1,7 +1,7 @@
+// @ts-check
 const { test, expect } = require('@playwright/test');
 const { chromium } = require('playwright');
 const { scrapePageArticles } = require('../../utils/collect.js'); // Import the function
-// const { CONFIG } = require('../utils/config.js'); // Import the config if needed
 
 test.describe('scrapePageArticles function', () => {
   let browser;

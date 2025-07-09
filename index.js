@@ -1,7 +1,6 @@
 const { chromium } = require("playwright");
 const { CONFIG } = require('./utils/config.js');// Import the configuration
 const { getArticles } = require('./utils/collect.js'); // Import the collection function
-// const { saveArticlesToFile } = require('./utils/save.js');
 const {
   sortArticlesByAge,
   verifySortedArticles,

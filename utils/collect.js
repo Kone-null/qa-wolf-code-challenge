@@ -1,5 +1,4 @@
 
-// const { Page } = require("playwright");
 /**
  * Determine if a Hacker News “new links” page contains articles.
  *
@@ -23,7 +22,7 @@ export async function hasArticlesOnPage(page) {
     if (hasPre) {
       const text = await preTag.innerText({ timeout: 1000 }).catch(() => '');
       if (text.includes("Sorry")) {
-        console.warn('\x1b[33m[WARN]\x1b[0m [hasArticlesOnPage] Blocked page detected (contains "Sorry").'); // make orange
+        console.warn('\x1b[33m[WARN]\x1b[0m [hasArticlesOnPage] Blocked page detected (contains "Sorry").');
         return false;
       }
 
@@ -32,21 +31,21 @@ export async function hasArticlesOnPage(page) {
     // 2. Title check.
     const actualTitle = await page.title();
     if (actualTitle !== EXPECTED_TITLE) {
-      console.warn(`\x1b[33m[WARN]\x1b[0m  [hasArticlesOnPage] Unexpected page title: expected "${EXPECTED_TITLE}", got "${actualTitle}".`); // make orange
+      console.warn(`\x1b[33m[WARN]\x1b[0m  [hasArticlesOnPage] Unexpected page title: expected "${EXPECTED_TITLE}", got "${actualTitle}".`);
       return false;
     }
 
     // 3. Article elements check.
     const articleCount = await page.locator('.athing').count();
     if (articleCount === 0) {
-      console.warn('\x1b[33m[WARN]\x1b[0m  [hasArticlesOnPage] No article elements (.athing) found on the page.'); // make orange
+      console.warn('\x1b[33m[WARN]\x1b[0m  [hasArticlesOnPage] No article elements (.athing) found on the page.');
       return false;
     }
 
     return true;
 
   } catch (error) {
-    console.error(`\x1b[31m[ERROR]\x1b[0m  [hasArticlesOnPage]  Error in hasArticlesOnPage: ${err.message}`); // make red
+    console.error(`\x1b[31m[ERROR]\x1b[0m  [hasArticlesOnPage]  Error in hasArticlesOnPage: ${err.message}`);
     return false;
   }
 }
@@ -145,7 +144,7 @@ export async function scrapePageArticles(page, articleLimit) {
     }, limit);
     return articles;
   } catch (error) {
-    console.error(`\x1b[31m[ERROR]\x1b[0m  [scrapePageArticles] Error in scrapePageArticles: ${error}`); //  Make red
+    console.error(`\x1b[31m[ERROR]\x1b[0m  [scrapePageArticles] Error in scrapePageArticles: ${error}`);
     return [];
   }
 }
@@ -179,30 +178,30 @@ export async function collectByPagination(
 
     const remaining = maxTotal - collected.length;
     const pageLimit = Math.min(perPageLimit, remaining);
-    console.info(`\x1b[36m[INFO]\x1b[0m  [collectByPagination] Page ${pageIndex}: fetching up to ${pageLimit} articles`); // make cyan
+    console.info(`\x1b[36m[INFO]\x1b[0m  [collectByPagination] Page ${pageIndex}: fetching up to ${pageLimit} articles`); 
 
     // Ensure page is valid
     if (!(await hasArticlesOnPage(page))) {
       if (retries-- > 0) {
-        console.warn(`\x1b[33m[WARN]\x1b[0m  [collectByPagination] Page blocked or invalid. Retrying after ${delayMs}ms...`); // make orange
+        console.warn(`\x1b[33m[WARN]\x1b[0m  [collectByPagination] Page blocked or invalid. Retrying after ${delayMs}ms...`);
         await page.waitForTimeout(delayMs);
         delayMs *= 2;
         await page.reload({ waitUntil: 'networkidle' });
         continue;
       }
-      console.error('\x1b[31m[ERROR]\x1b[0m  [collectByPagination]  Max retries reached. Aborting pagination.'); // make red
+      console.error('\x1b[31m[ERROR]\x1b[0m  [collectByPagination]  Max retries reached. Aborting pagination.');
       break;
     }
 
     const articles = await scrapePageArticles(page, pageLimit);
 
     if (articles.length === 0) {
-      console.warn('\x1b[33m[WARN]\x1b[0m  [collectByPagination] No articles found on this page. Stopping.'); // make orange
+      console.warn('\x1b[33m[WARN]\x1b[0m  [collectByPagination] No articles found on this page. Stopping.'); 
       break;
     }
 
     collected.push(...articles);
-    console.info(`\x1b[36m[INFO]\x1b[0m  [collectByPagination] Collected ${collected.length}/${maxTotal} articles so far.`); // make cyan
+    console.info(`\x1b[36m[INFO]\x1b[0m  [collectByPagination] Collected ${collected.length}/${maxTotal} articles so far.`);
     // Prepare next page if needed.
     if (collected.length < maxTotal) {
       await page.waitForLoadState('networkidle', { timeout: initialDelayMs });
@@ -210,7 +209,7 @@ export async function collectByPagination(
         await page.getByRole('link', { name: 'More', exact: true }).click();
         pageIndex++;
       } catch {
-        console.warn('\x1b[33m[WARN]\x1b[0m  [collectByPagination] No "More" button found. Ending pagination.'); // make orange
+        console.warn('\x1b[33m[WARN]\x1b[0m  [collectByPagination] No "More" button found. Ending pagination.');
         break;
       }
     }
@@ -291,7 +290,7 @@ export async function getArticles(
     return allArticles.slice(0, maxArticles);
 
   } catch (err) {
-    console.error(`\x1b[31m[ERROR]\x1b[0m  [getArticles]  Error: ${err}`); // make red
+    console.error(`\x1b[31m[ERROR]\x1b[0m  [getArticles]  Error: ${err}`);
     return [];
   } finally {
     // 5. Ensure browser closes.
@@ -299,7 +298,7 @@ export async function getArticles(
       try {
         await browser.close();
       } catch (closeErr) {
-        console.error(`\x1b[31m[ERROR]\x1b[0m  [getArticles]  Error closing browser: ${closeErr}`); // make red
+        console.error(`\x1b[31m[ERROR]\x1b[0m  [getArticles]  Error closing browser: ${closeErr}`);
       }
     }
   }

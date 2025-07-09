@@ -1,5 +1,5 @@
+// @ts-check
 const { test, expect } = require('@playwright/test');
-// const { chromium } = require('playwright');
 const { hasArticlesOnPage} = require('../../utils/collect.js');
 
 test.describe('hasArticlesOnPage', () => {
