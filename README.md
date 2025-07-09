@@ -157,8 +157,8 @@ qa-wolf-code-challenge/
 
 ## Notes
 
+- Made on Unix (intel MacOS).
 - Ensure you are using Node.js 16 or above.
-- Made on Unix (intel MacOS)
 - All scraping and verification logic is in `index.js` and the `utils/` folder.
 - You may need to update Playwright browsers for the first run with:
   ```bash
