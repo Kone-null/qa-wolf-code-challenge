@@ -21,8 +21,7 @@ This repository contains a solution to the [QA Wolf Application Coding Challenge
 
 - Scrapes the newest articles from Hacker News using Playwright
 - Collects a configurable number of articles (default: 100)
-- Sorts articles by age (newest to oldest)
-- Verifies the sort order and article count
+- Verifies the article count and order
 - Automated tests using Playwright Test
 
 ---
