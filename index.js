@@ -2,8 +2,7 @@ const { chromium } = require("playwright");
 const { CONFIG } = require('./utils/config.js');// Import the configuration
 const { getArticles } = require('./utils/collect.js'); // Import the collection function
 const {
-  sortArticlesByAge,
-  verifySortedArticles,
+  validateArticleSorting,
   verifyArticleCount
 } = require('./utils/sort-verify.js'); // Import the sorting function
 
@@ -66,21 +65,19 @@ async function saveArticlesToFile(articles, outPath) {
  * @async
  * @function
  *
- * Main workflow to scrape, validate, sort, and persist meta data for Hacker News articles.
+ * Main workflow to scrape, validate, and persist meta data for Hacker News articles.
  *
  * This function:
  * - Uses configuration settings to launch a browser and collect articles.
- * - Saves the raw and sorted articles to JSON files.
+ * - Saves the raw articles to JSON files.
  * - Verifies the article count against the configured maximum.
- * - Sorts articles by `ageEpoch` from newest to oldest.
- * - Verifies that the sorted list is correctly ordered.
+ * - Validates that articles are sorted from newest to oldest by `ageEpoch`.
  *
  * @requires CONFIG
  * @requires getArticles
  * @requires saveArticlesToFile
  * @requires verifyArticleCount
- * @requires sortArticlesByAge
- * @requires verifySortedArticles
+ * @requires validateArticleSorting
  *
  * @returns {Promise<boolean>} Resolves to `true` if articles were successfully scraped, sorted, and verified; otherwise `false`.
  *
@@ -98,6 +95,7 @@ async function sortHackerNewsArticles() {
   const maxArticles = config.MAX_ARTICLES;
 
   const dataSaveDir = config.SAVE_PATH;
+
 
 
   // 1. Scrape
@@ -124,13 +122,8 @@ async function sortHackerNewsArticles() {
     return false;
   }
 
-  // 4. Sort & persist
-  const sortedArticles = await sortArticlesByAge(articles);
-  const sortedPath = path.join(dataSaveDir, "hacker_news_articles_sorted.json")
-  await saveArticlesToFile(sortedArticles, sortedPath);
-
-  // 5. Verify ordering
-  const isSortedCorrectly = await verifySortedArticles(sortedArticles);
+  // 4. Verify original order
+  const isSortedCorrectly = await validateArticleSorting(articles);
 
   if (!isSortedCorrectly) {
     console.error(`\x1b[31m[ERROR]\x1b[0m  [sortHackerNewsArticles]  Articles are not properly sorted`)

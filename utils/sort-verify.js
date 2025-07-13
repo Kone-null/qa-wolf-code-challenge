@@ -1,32 +1,8 @@
-
-/**
- * Asynchronously sorts articles by their posting time, newest first.
- *
- * @async
- * @function sortArticlesByAge
- * @param {Article[]} articles - Array of articles to sort.
- * @returns {Promise<Article[]>} A promise that resolves with the input array sorted in-place (highest `ageEpoch` → lowest).
- *
- * @typedef {Object} Article
- * @property {string} title     – Article title.
- * @property {string} link      – URL to the article.
- * @property {string} rank      – Displayed rank (e.g. "1.").
- * @property {number} ageEpoch  – UNIX timestamp (seconds).
- * @property {string} ageDate   – ISO 8601 date string.
- *
- * @example
- * const sorted = await sortArticlesByAge(articles);
- * console.log(sorted[0].ageDate); // Newest article date
- */
-export async function sortArticlesByAge(articles) {
-  return articles.sort((a, b) => b.ageEpoch - a.ageEpoch);
-}
-
 /**
  * Checks that articles are sorted by `ageEpoch` in descending order (newest → oldest).
  *
  * @async
- * @function verifySortedArticles
+ * @function validateArticleSorting
  * @param {Article[]} articles - Array of articles to verify.
  * @returns {Promise<boolean>} Resolves to `true` if sorted correctly; otherwise `false`.
  *
@@ -38,19 +14,19 @@ export async function sortArticlesByAge(articles) {
  * @property {string} ageDate   – ISO 8601 date string.
  *
  * @example
- * const isSorted = await verifySortedArticles(articles);
+ * const isSorted = await validateArticleSorting(articles);
  * if (!isSorted) {
  *   console.warn("Articles are not sorted from newest to oldest.");
  * }
  */
-export async function verifySortedArticles(articles) {
+export async function validateArticleSorting(articles) {
   for (let i = 0; i < articles.length - 1; i++) {
     const current = articles[i];
     const next = articles[i + 1];
 
     if (current.ageEpoch < next.ageEpoch) {
       console.error(
-        `\x1b[31m[ERROR]\x1b[0m  [verifySortedArticles] Order error at index ${i}: ` +
+        `\x1b[31m[ERROR]\x1b[0m  [validateArticleSorting] Order error at index ${i}: ` +
         `"${current.title}" (epoch: ${current.ageEpoch}) is older than ` +
         `"${next.title}" (epoch: ${next.ageEpoch}).`
       );
