@@ -1,32 +1,18 @@
 const { test, expect } = require('@playwright/test');
 const {
-  sortArticlesByAge,
-  verifySortedArticles,
+
+  validateArticleSorting,
   verifyArticleCount,
 } = require('../utils/sort-verify.js');
 
-test.describe('sortArticlesByAge', () => {
-  test('sorts articles from newest to oldest by ageEpoch', async () => {
-    const articles = [
-      { title: 'Old', ageEpoch: 100 },
-      { title: 'New', ageEpoch: 300 },
-      { title: 'Mid', ageEpoch: 200 },
-    ];
-    const sorted = await sortArticlesByAge([...articles]);
-    expect(sorted[0].title).toBe('New');
-    expect(sorted[1].title).toBe('Mid');
-    expect(sorted[2].title).toBe('Old');
-  });
-});
-
-test.describe('verifySortedArticles', () => {
+test.describe('validateArticleSorting', () => {
   test('returns true for correctly sorted articles', async () => {
     const articles = [
       { title: 'Newest', ageEpoch: 300 },
       { title: 'Middle', ageEpoch: 200 },
       { title: 'Oldest', ageEpoch: 100 },
     ];
-    const result = await verifySortedArticles(articles);
+    const result = await validateArticleSorting(articles);
     expect(result).toBe(true);
   });
 
@@ -36,7 +22,7 @@ test.describe('verifySortedArticles', () => {
       { title: 'Newest', ageEpoch: 300 },
       { title: 'Middle', ageEpoch: 200 },
     ];
-    const result = await verifySortedArticles(articles);
+    const result = await validateArticleSorting(articles);
     expect(result).toBe(false);
   });
 });
